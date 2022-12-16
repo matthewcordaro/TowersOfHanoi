@@ -4,7 +4,9 @@ from os import system as sys
 from os import name as operating_system
 from enum import Enum
 from pynput import keyboard
+from pynput.keyboard import Key, KeyCode
 from time import sleep
+import utility
 
 INPUT_LAG = 0.2
 
@@ -15,6 +17,7 @@ class GAMESTATE(Enum):
   GAME_MENU = 2
   PLAY = 3
   GAME_OVER_SCREEN = 4
+  SET_PARAMETERS_MENU = 5
 
 
 class Game:
@@ -38,21 +41,7 @@ class Game:
         continue
 
       if Game.STATE == GAMESTATE.GAME_MENU:
-        Game.clear_screen()
-        response = Game.game_setup_menu()
-        if response == -1:
-          continue
-        if response == 1:
-          Game.play_game(number_of_towers=3, number_of_disks=4)
-          Game.STATE = GAMESTATE.GAME_MENU
-          continue
-        if response == 2:
-          print("Not Yet implemented")
-          sleep(3)
-          continue
-        if response == 3:
-          Game.STATE = GAMESTATE.MAIN_MENU
-        continue
+        Game.game_setup_menu()
 
       if Game.STATE == GAMESTATE.PLAY:
         # UNUSED ATM
@@ -170,30 +159,36 @@ class Game:
           continue
 
   @staticmethod
+  def _set_state(game_state: GAMESTATE):
+    Game.STATE = game_state
+
+  @staticmethod
   def game_setup_menu():
     """
     The Game Menu.
-    :returns:
     (1) Play an easy game. <br>
     (2) set number of levels. <br>
     (3) Main Menu <br>
     (-1) Error.
     """
-    print("Game Menu: ")
-    print("  1) Play Standard Easy Game")
-    print("  2) Set number of levels")
-    print("  3) Main Menu")
-    valid_keys = ['1', '2', '3']
+    intro = "Game Menu: \n"
+    key_options = [KeyCode.from_char('1'),
+                   KeyCode.from_char('2'),
+                   Key.esc]
+    text_options = ["  1) Play Standard Easy Game",
+                    "  2) Set number of levels",
+                    "Esc) Main Menu"]
+    end = ""
+    option_function = [lambda _: Game.play_game(number_of_towers=3, number_of_disks=4),
+                       lambda _: Game._set_state(GAMESTATE.SET_PARAMETERS_MENU),
+                       lambda _: Game._set_state(GAMESTATE.MAIN_MENU)]
     while True:
-      with keyboard.Events() as events:
-        # Block for as much as possible
-        event = events.get(1e6)
-        sleep(INPUT_LAG)
-        try:
-          if event.key.char in valid_keys:
-            return int(event.key.char)
-        except AttributeError:
-          continue
+      response = utility.keystroke_menu(list(zip(key_options, text_options)),
+                                        intro_text=intro,
+                                        end_text=end)
+      print(type(response))
+      # if response in key_options:
+      #   option_function[key_options.index(response)]()
 
   @staticmethod
   def game_over_screen():
